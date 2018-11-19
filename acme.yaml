@@ -1,0 +1,21 @@
+tosca_grammar: '2.0'
+
+namespace: acme
+
+import:
+  - orchestration
+
+assign:
+
+  openstack.Provisioner:
+    imply: orchestration.openstack.Provisioner
+    assign:
+      api_key: Qklq4C7vbEGprA
+      flavors:
+      - name: m1.large
+        id: 5d62e82c-924e-4fa9-b1e4-c133867596f7
+
+  aws.Provisioner:
+    imply: orchestration.aws.Provisioner
+    assign:
+      api_key: Qklq4C7vbEGprA

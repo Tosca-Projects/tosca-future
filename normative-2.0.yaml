@@ -1,0 +1,151 @@
+tosca_grammar: '2.0'
+
+namespace: tosca
+
+declare:
+
+  # Operations
+
+  Serialize:
+    imply: operation
+    declare:
+      operations: list of operation
+
+  Parallelize:
+    imply: operation
+    declare:
+      operations: list of operation
+
+  Execute:
+    imply: operation
+    declare:
+      file: { type: artifact, constrain: !require }
+      arguments: map of string to any
+
+  ExecuteAt:
+    imply: Execute
+
+  CallPython:
+    imply: operation
+    declare:
+      pypi: string
+      function: { type: string, constrain: !require }
+      arguments: map of string to any
+
+  # Workflows
+  
+  Workflow:
+    imply: operation
+
+  Install:
+    imply: Workflow
+
+  Uninstall:
+    imply: Workflow
+
+  # Nodes
+
+  Node:
+    meta:
+      tosca.role: instance
+    declare:
+      instances: { type: integer, constrain: !require }
+      start: operation
+      stop: operation
+    assign:
+      instances: 0
+
+  Provisionable:
+    imply: Node
+    declare:
+      provision: operation
+      destroy: operation
+
+  # Relationships
+
+  RelatesTo:
+    declare:
+      add_source: operation
+      add_target: operation
+      remove_source: operation
+      remove_target: operation
+
+  HostedOn:
+    imply: RelatedTo
+    meta:
+      tosca.role: host
+
+  InstalledOn:
+    imply: HostedOn
+    declare:
+      source: { type: artifact, constrain: !require }
+      location: { type: string, constrain: !require }
+
+  # Common nodes
+
+  Memory:
+    declare:
+      numa: { type: enum }
+      size: { type: scalar-size }
+
+  OS:
+    declare:
+      name: string
+      version: string
+
+  Compute:
+    imply:
+      - Memory
+      - OS
+    declare:
+      architecture: { type: string, mutable: true }
+
+  Machine:
+    imply:
+      - Node
+      - Compute
+
+  VirtualMachine:
+    imply:
+      - Node
+      - Compute
+    require: Machine
+
+  Container:
+    imply:
+      - Node
+      - Compute
+    require: Compute
+
+  Software:
+    imply: Node
+    declare:
+      name: string
+      version: string
+
+  # Plugins
+
+  Plugin:
+    declare:
+      initialize: operation
+
+  Provisioner:
+    imply: Plugin
+    declare:
+      allocate: { type: operation, constrain: !require }
+
+  openstack.Provisioner:
+    replace: Provisioner
+    declare:
+      flavors: map of string to openstack.Flavor
+
+  openstack.Flavor:
+    declare:
+      name: string
+      id: string
+
+  aws.Provisioner:
+    replace: Provisioner
+
+  docker.Provisioner:
+    replace: Provisioner

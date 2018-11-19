@@ -1,0 +1,44 @@
+tosca_grammar: '2.0'
+
+namespace: orchestration
+
+import:
+- normative-2.0
+
+declare:
+
+  Execute:
+    replace: tosca.Execute
+    assign:
+      !tosca.CallPython:
+        function: orchestration.operations.execute_local
+
+  ExecuteAt:
+    replace: tosca.RemoteExecute
+    assign:
+      !tosca.CallPython:
+        function: orchestration.operations.execute_remote
+
+  Install:
+    replace: tosca.Install
+    assign:
+      !tosca.CallPython:
+        function: orchestration.workflows.install
+
+  Uninstall:
+    replace: tosca.Uninstall
+    assign:
+      !tosca.CallPython:
+        function: orchestration.workflows.uninstall
+
+  openstack.Provisioner:
+    replace: tosca.openstack.Provisioner
+    assign:
+      initialize:
+        !tosca.CallPython:
+          pypi: orchestration-openstack-plugin
+          function: orchestration.openstack.initialize
+      allocate:
+        !tosca.CallPython:
+          pypi: orchestration-openstack-plugin
+          function: orchestration.openstack.allocate

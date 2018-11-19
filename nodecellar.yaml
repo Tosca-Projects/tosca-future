@@ -1,0 +1,102 @@
+tosca_grammar: '2.0'
+
+namespace: nodecellar
+
+import:
+- normative-2.0
+
+assign:
+  
+  NodeCellar:
+    imply:
+    - tosca.Software
+    - entity: tosca.endpoint.Http
+      alias: public_interface
+    - entity: tosca.endpoint.Http
+      alias: admin_interface
+    assign:
+      instances: 1
+      public_interface:
+        port: { !get: Inputs.port }
+        root_url: /
+      admin_interface:
+        port: { !get: Inputs.port }
+        root_url: /admin
+    require:
+    - entity: NodeJs
+      insert:
+        entity: tosca.InstalledOn
+        assign:
+          source: https://github.com/ccoenraets/nodecellar/archive/master.zip
+          location: /opt/nodejs/node-cellar
+          user: www-data
+          add_target:
+            !tosca.ExecuteAt:
+              file: scripts/nodecellar_configure.sh
+              arguments:
+                root_url: { !get: [ !self, public_interface.root_url ] }
+    - entity: MongoDb
+      insert:
+        entity: tosca.RelatesTo
+        assign:
+          add_target:
+            !tosca.ExecuteAt:
+              file: scripts/nodecellar_configure_MongoDb.sh
+
+  NodeJs:
+    imply: tosca.Software
+    require:
+    - entity: tosca.Compute
+      constrain:
+        architecture: x86_64
+        tosca.Memory.size: { !greater_than: 2 GB }
+        tosca.OS.family: linux
+      insert:
+        entity: tosca.RelatesTo
+        assign:
+          add_target:
+            !tosca.PackageInstallOperation:
+              deb: nodejs
+              rpm: nodejs
+
+  MongoDb:
+    imply: tosca.Software
+    require:
+    - entity: tosca.Compute
+      constrain:
+        architecture: { !in: [ x86_64, i386 ] }
+        tosca.Memory.size: { !greater_than: 4 GB }
+        tosca.OS:
+          family: linux
+          name: ubuntu
+          version: '16.04'
+      insert:
+        entity: tosca.RelatesTo
+        assign:
+          add_target:
+            !tosca.PackageInstallOperation:
+              deb: mongodb-server
+              deb_repository:
+                line: 'deb http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.4 multiverse'
+                key: 0C49F3730359A14518585931BC711F9BA15703C6
+                key_server: hkp://keyserver.ubuntu.com:80
+
+  Install:
+    imply: tosca.Install
+    declare:
+      url: string
+    assign:
+      url:
+        !string:
+          template: 'http://${address}:${port}${url}'
+          address: { !get: [ NodeCellar, $host, public_interface.address ] }
+          port: { !get: NodeCellar.public_interface.port }
+          url: { !get: NodeCellar.public_interface.root_url }
+
+  Inputs:
+    declare:
+      port: integer
+    assign:
+      port: 80
+
+  Provisioner: tosca.Provisioner
